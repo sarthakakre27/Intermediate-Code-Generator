@@ -1,0 +1,7 @@
+while(a < b)
+{
+    while(b > c)
+    {
+        b++;
+    }
+}
