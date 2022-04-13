@@ -60,9 +60,9 @@ void replace(char* s1,char* str, char* label)
 }
 %token<ival> DIGIT
 %token<fval> FLOAT
-%token<sval> ID IF ELSE WHILE TYPES  REL_OPT OR AND CASE SWITCH NOT PE ME INCR DEFAULT DECR TRUE FALSE BREAK FOR
-%token<sval> '+' '-' '*' '/' '^' '%' '\n' '=' ';' '@' ':' '&' '|' 
-%type<sval> list text number construct  block dec bool program startSym caseblock 
+%token<sval> ID IF ELSE WHILE TYPES  REL_OPT OR AND NOT PE ME INCR DEFAULT DECR TRUE FALSE BREAK FOR
+%token<sval> '+' '-' '*' '/' '^' '%' '\n' '=' ';' '@' ':' '&' '|' ','
+%type<sval> list text number construct  block dec bool program startSym
 %type<EXPRTYPE> expr stat list_expr
 %left OR
 %left AND
@@ -156,21 +156,6 @@ construct :     block
 			$$ = ret;
 		}
 		|
-		SWITCH '(' ID ')' '{' caseblock '}'
-		{
-			char *var = $3;
-			b1 = $6;
-			replace(b1,"VARI",var);
-			s1 = $6;
-			label = "NEXT";	
-			replace(s1,"LAST","NEXT");
-			ret = (char*)malloc(strlen($6)+100);
-			ret[0]=0;
-			strcat(ret,$6);
-				
-			$$ = ret;
-		}
-		|
 		FOR '(' list_expr ';'  bool ';' list_expr ')' block
 		{
 			b1 = $5;
@@ -192,36 +177,6 @@ construct :     block
 			$$ = ret;
 		}
 		;
-
-caseblock	:  CASE expr ':' block caseblock
-			{
-				label=newLabel(); label2 = newLabel();
-				ret = (char*)malloc(strlen($5)+100); 
-				memset(ret,0,sizeof ret); 
-				strcat(ret,$2->code);strcat(ret,"\nif(VARI=");
-				strcat(ret,$2->addr); strcat(ret,") "); strcat(ret,"jump ");strcat(ret,label); strcat(ret,"\n"); strcat(ret,"jump "); strcat(ret,label2);
-				strcat(ret,"\n"); strcat(ret,label); strcat(ret," : "); strcat(ret,$4); strcat(ret,"\n"); strcat(ret,"jump NEXT"); strcat(ret,"\n");strcat(ret,label2); strcat(ret," : "); strcat(ret,$5); 
-				$$=ret;
-			}
-			|
-			CASE expr  ':' block
-			{
-				
-				label=newLabel(); label2 = newLabel();
-				ret = (char*)malloc(500*sizeof(char)); 
-				memset(ret,0,sizeof ret); 
-				strcat(ret,$2->code);strcat(ret,"\nif(VARI=");strcat(ret,$2->addr); strcat(ret,") "); strcat(ret,"jump ");strcat(ret,label); strcat(ret,"\n"); strcat(ret,"jump LAST"); 
-				strcat(ret,"\n"); strcat(ret,label); strcat(ret," : "); strcat(ret,$4); 
-				$$=ret;
-			}
-			|
-			DEFAULT ':' block
-			{
-				ret = (char*)malloc(500*sizeof(char));  memset(ret,0,sizeof(ret)); ret[0]=0;
-				strcat(ret,$3);
-				$$=ret;
-			}
-			;
 
 block:		'{' list '}'
 		{
@@ -246,7 +201,7 @@ list:    stat               /* Base Condition */
 		{
 			$$ = $1->code;
 		}
-         |
+        |
         list stat
 		{
 			ret = (char *)malloc(strlen($1)+strlen($2->code)+4);
@@ -254,7 +209,7 @@ list:    stat               /* Base Condition */
 			strcat(ret,$1);strcat(ret,"\n");strcat(ret,$2->code);
 			$$ = ret;
 		}
-	 |
+	 	|
         list error '\n'
          {
            yyerrok;

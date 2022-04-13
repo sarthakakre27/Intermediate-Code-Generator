@@ -23,11 +23,8 @@ TYPES ["int" "unsigned_int" "double"]
 
 "if" 								{ return (IF); }
 "else" 								{ return (ELSE); }
-"case"								{ return (CASE);}
 "for"								{return (FOR);}
 "break"								{return (BREAK);}
-"default"							{return (DEFAULT);}
-"switch"							{return (SWITCH);}
 "while"								{ return (WHILE); }
 "unsigned_int" 						{return (TYPES);}
 "boolean" 							{return (TYPES);}
