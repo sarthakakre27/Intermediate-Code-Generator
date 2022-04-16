@@ -10,42 +10,49 @@ struct exprType{
 	char *code;
 	
 };
-extern int yylineno;
-int n=1;	//Stores the number of the last temporary variable used
-int nl = 1; //Stores the number of the last label used
-char *var;char num_to_concatinate[10];char num_to_concatinate_l[10];char *ret;char *temp;
-char *label;char *label2;char *check;char *begin;
+extern int yylineno; //for error line printing
+int num_temp = 1;	//Stores the number of the last temporary variable used
+int num_label = 1; //Stores the number of the last label used
+char *var;
+char num_to_concatinate[10];
+char num_to_concatinate_l[10];
+char* ret;
 char* temp;
-char * b1;char *b2;char *s1;char *s2;
+char* label;char *label2;char *check;char *begin;
+char* temp;
+char* b1;
+char* b2;
+char* s1;
+char* s2;
 struct exprType *to_return_expr;	//To store the code and address corresponding to generation of expression and statements.
 void yyerror(char* s);
 int yylex(void);
 
 //Function to generate new temporary variables
-char * newTemp()
+char * generateNewTemporary()
 {
 	char *newTemp = (char *)malloc(20);
 	strcpy(newTemp,"t");
 	num_to_concatinate[0]=0;
-	snprintf(num_to_concatinate, 10,"%d",n);
+	snprintf(num_to_concatinate, 10,"%d",num_temp);
 	strcat(newTemp,num_to_concatinate);
-	n++;
+	num_temp++;
 	return newTemp;
 }
 
 //Function to generate new labels
-char * newLabel()
+char * generateNewLabel()
 {
 	char *newLabel = (char *)malloc(20);
 	strcpy(newLabel,"L");
-	snprintf(num_to_concatinate_l, 10,"%d",nl);
+	snprintf(num_to_concatinate_l, 10,"%d",num_label);
 	strcat(newLabel,num_to_concatinate_l);
-	nl++;
+	num_label++;
 	return newLabel;
 }
 
 //Function to replace a substring str with another substring label in the original string s1
-void replace(char* s1,char* str, char* label)
+void backpatch(char* s1,char* str, char* label)
 {
 	char* check = strstr (s1,str);
 	while(check!=NULL)
@@ -56,6 +63,7 @@ void replace(char* s1,char* str, char* label)
 	}
 }
 %}
+
 %start startSym
 %union {
 	int ival;
@@ -63,12 +71,14 @@ void replace(char* s1,char* str, char* label)
 	char *sval;
 	struct exprType *EXPRTYPE;
 }
+
 %token<ival> DIGIT
 %token<fval> FLOAT
 %token<sval> ID IF ELSE WHILE TYPES  REL_OPT OR AND NOT PE ME INCR DEFAULT DECR TRUE FALSE BREAK FOR
-%token<sval> '+' '-' '*' '/' '^' '%' '\n' '=' ';' '@' ':' '&' '|' ','
+%token<sval> '+' '-' '*' '/' '^' '%' '\n' '=' ';' ':' '&' '|' ','
 %type<sval> list text number construct  block dec bool program startSym
 %type<EXPRTYPE> expr stat list_expr unary
+
 %left OR
 %left AND
 %left NOT
@@ -77,13 +87,13 @@ void replace(char* s1,char* str, char* label)
 %right '='
 %left '+' '-'
 %left '*' '/' '%'
-%right '@'
 %%
+
 startSym:	program
 		{
 			s1 = $1;
-			label = newLabel();
-			replace(s1,"NEXT",label);
+			label = generateNewLabel();
+			backpatch(s1,"NEXT",label);
 			ret = (char *)malloc(strlen(s1) + 50);
 			ret[0] = 0;
 			strcat(ret,s1);
@@ -100,8 +110,8 @@ program : 	program construct
 		{
 			s1 = $1;
 			s2 = $2;
-			label = newLabel();
-			replace(s1,"NEXT",label);
+			label = generateNewLabel();
+			backpatch(s1,"NEXT",label);
 			ret = (char *)malloc(strlen($1)+strlen($2)+4);
 			ret[0] = 0;
 			strcat(ret,$1);
@@ -128,11 +138,11 @@ construct :     block
 			
 			b1 = $3;
 			s1 = $5;
-			label = newLabel();
-			replace(b1,"TRUE",label);
-			replace(b1,"FAIL","NEXT");
-			begin = newLabel();
-			replace(s1,"NEXT",begin);
+			label = generateNewLabel();
+			backpatch(b1,"TRUE",label);
+			backpatch(b1,"FAIL","NEXT");
+			begin = generateNewLabel();
+			backpatch(s1,"NEXT",begin);
 			ret = (char *)malloc(strlen(b1)+strlen(s1)+200);
 			ret[0] = 0;
 			strcat(ret,begin);
@@ -151,10 +161,10 @@ construct :     block
 		|
 		IF '(' bool ')' block
 		{
-			label = newLabel();
+			label = generateNewLabel();
 			b1 = $3;
-			replace(b1,"TRUE",label);
-			replace(b1,"FAIL","NEXT");
+			backpatch(b1,"TRUE",label);
+			backpatch(b1,"FAIL","NEXT");
 			check = strstr(b1,"FAIL");
 			ret = (char *)malloc(strlen(b1)+strlen($5)+4);
 			ret[0] = 0;
@@ -166,15 +176,14 @@ construct :     block
 			printf("Printing ret \n");
 			$$ = ret;
 		}
-		
 		|
 		IF '(' bool ')' block ELSE block
 		{
 			b1 = $3;
-			label = newLabel();
-			replace(b1,"TRUE",label);
-			label2 = newLabel();
-			replace(b1,"FAIL",label2);
+			label = generateNewLabel();
+			backpatch(b1,"TRUE",label);
+			label2 = generateNewLabel();
+			backpatch(b1,"FAIL",label2);
 			ret = (char *)malloc(strlen(b1)+strlen($5)+strlen($7)+20);
 			ret[0] = 0;
 			strcat(ret,b1);strcat(ret,"\n");
@@ -194,12 +203,12 @@ construct :     block
 		{
 			b1 = $5;
 			s1 = $9;
-			label = newLabel();
-			replace(b1,"TRUE",label);
-			replace(b1,"FAIL","NEXT");
-			begin = newLabel();
-			replace(s1,"NEXT",begin);
-			ret = (char *)malloc(strlen(b1)+strlen(s1)+strlen($3->code)+strlen($7->code)+200);
+			label = generateNewLabel();
+			backpatch(b1,"TRUE",label);
+			backpatch(b1,"FAIL","NEXT");
+			begin = generateNewLabel();
+			backpatch(s1,"NEXT",begin);
+			ret = (char *)malloc(strlen(b1) + strlen(s1) + strlen($3->code) + strlen($7->code) + 200);
 			ret[0] = 0;
 			strcat(ret,$3->code);
 			strcat(ret,"\n");
@@ -220,7 +229,6 @@ block:	'{' list '}'
 		{
 			$$ = $2;
 		}
-		
 		|
 		'{' program '}'
 		{
@@ -231,7 +239,6 @@ block:	'{' list '}'
 		{
 			$$ = $1;
 		}
-		
 		;
 	 
 
@@ -242,9 +249,11 @@ list:   stat
         |
         list stat
 		{
-			ret = (char *)malloc(strlen($1)+strlen($2->code)+4);
+			ret = (char *)malloc(strlen($1) + strlen($2->code) + 4);
 			ret[0] = 0;
-			strcat(ret,$1);strcat(ret,"\n");strcat(ret,$2->code);
+			strcat(ret,$1);
+			strcat(ret,"\n");
+			strcat(ret,$2->code);
 			$$ = ret;
 		}
 	 	|
@@ -264,28 +273,27 @@ stat:   ';'
 			to_return_expr->code[0] = 0;
 			$$ = to_return_expr;
 	 	}
-	 |
-	 unary 
-	 {
-		 $$ = $1;
-	 }
-	 |
-	 dec ';'
-         {
-		to_return_expr = (struct exprType *)malloc(sizeof(struct exprType));
-		to_return_expr->addr = (char *)malloc(200);
-		to_return_expr->addr = $1;
-		
-		to_return_expr->code = (char *)malloc(2);
-		to_return_expr->code[0] = 0;
-		$$ = to_return_expr;
-         }
+	 	|
+	 	unary 
+	 	{
+			 $$ = $1;
+	 	}
+	 	|
+	 	dec ';'
+        {
+			to_return_expr = (struct exprType *)malloc(sizeof(struct exprType));
+			to_return_expr->addr = (char *)malloc(200);
+			to_return_expr->addr = $1;
+			to_return_expr->code = (char *)malloc(2);
+			to_return_expr->code[0] = 0;
+			$$ = to_return_expr;
+        }
 		|
         text '=' expr ';'
         {
 			to_return_expr = (struct exprType *)malloc(sizeof(struct exprType));
 			to_return_expr->addr = (char *)malloc(200);
-			to_return_expr->addr = newTemp();
+			to_return_expr->addr = generateNewTemporary();
 			ret = (char *)malloc(20);
 			ret[0] = 0;
 			strcat(ret,$1);strcat(ret,"=");
@@ -302,11 +310,11 @@ stat:   ';'
 			$$ = to_return_expr;
         }
         |
-         text PE expr ';'
-         {
+        text PE expr ';'
+        {
 	        to_return_expr = (struct exprType *)malloc(sizeof(struct exprType));
 			to_return_expr->addr = (char *)malloc(20);
-			to_return_expr->addr = newTemp();
+			to_return_expr->addr = generateNewTemporary();
 			ret = (char *)malloc(200);
 			ret[0] = 0;
 			strcat(ret,$1);
@@ -315,10 +323,8 @@ stat:   ';'
 			strcat(ret,$3->addr); strcat(ret,"\n");
 			strcat(ret,to_return_expr->addr); 
 			strcat(ret,"=");strcat(ret,$1);
-			temp = (char *)malloc(strlen($3->code)+strlen(ret)+60);
-
+			temp = (char *)malloc(strlen($3->code) + strlen(ret)+60);
 			temp[0] = 0;
-			
 			if ($3->code[0]!=0)
 			{
 				strcat(temp,$3->code);
@@ -333,7 +339,7 @@ stat:   ';'
          {
 			to_return_expr = (struct exprType *)malloc(sizeof(struct exprType));
 			to_return_expr->addr = (char *)malloc(20);
-			to_return_expr->addr = newTemp();
+			to_return_expr->addr = generateNewTemporary();
 			ret = (char *)malloc(20);
 			ret[0] = 0;
 			strcat(ret,$1);
@@ -346,7 +352,6 @@ stat:   ';'
 			strcat(ret,"=");
 			strcat(ret,$1);
 			temp = (char *)malloc(strlen($3->code)+strlen(ret)+6);
-
 			temp[0] = 0;
 			
 			if ($3->code[0]!=0)
@@ -357,23 +362,20 @@ stat:   ';'
 			strcat(temp,ret);
 			to_return_expr->code = temp;
 			$$ = to_return_expr;
-
-         }
+        }
 	 	|
 	 	dec '=' expr ';'
-         {
+        {
 			to_return_expr = (struct exprType *)malloc(sizeof(struct exprType));
 			to_return_expr->addr = (char *)malloc(200);
-			to_return_expr->addr = newTemp();
+			to_return_expr->addr = generateNewTemporary();
 			ret = (char *)malloc(200);
 			ret[0] = 0;
 			strcat(ret,$1);
 			strcat(ret,"=");
 			strcat(ret,$3->addr);
 			temp = (char *)malloc(strlen($1)+strlen($3->code)+strlen(ret)+6);
-
 			temp[0] = 0;
-
 			if ($3->code[0]!=0)
 			{
 				strcat(temp,$3->code);
@@ -389,7 +391,7 @@ unary : text INCR
 		{
 			to_return_expr = (struct exprType *)malloc(sizeof(struct exprType));
 			to_return_expr->addr = (char *)malloc(20);
-			to_return_expr->addr = newTemp();
+			to_return_expr->addr = generateNewTemporary();
 			ret = (char *)malloc(20);
 			ret[0] = 0;
 			strcat(ret,to_return_expr->addr);
@@ -411,7 +413,7 @@ unary : text INCR
 		{
 			to_return_expr = (struct exprType *)malloc(sizeof(struct exprType));
 			to_return_expr->addr = (char *)malloc(20);
-			to_return_expr->addr = newTemp();
+			to_return_expr->addr = generateNewTemporary();
 			ret = (char *)malloc(20);
 			ret[0] = 0;
 			strcat(ret,to_return_expr->addr);strcat(ret,"=");
@@ -434,7 +436,7 @@ unary : text INCR
 			
 	        to_return_expr = (struct exprType *)malloc(sizeof(struct exprType));
 			to_return_expr->addr = (char *)malloc(20);
-			to_return_expr->addr = newTemp();
+			to_return_expr->addr = generateNewTemporary();
 			ret = (char *)malloc(20);
 			ret[0] = 0;
 			strcat(ret,$2);strcat(ret,"=");strcat(ret,$2);strcat(ret,"+1");strcat(ret,"\n");strcat(ret,to_return_expr->addr);strcat(ret,"=");strcat(ret,$2);
@@ -451,7 +453,7 @@ unary : text INCR
 		{
 			to_return_expr = (struct exprType *)malloc(sizeof(struct exprType));
 			to_return_expr->addr = (char *)malloc(20);
-			to_return_expr->addr = newTemp();
+			to_return_expr->addr = generateNewTemporary();
 			ret = (char *)malloc(20);
 			ret[0] = 0;
 			strcat(ret,$2);
@@ -466,13 +468,13 @@ unary : text INCR
 		}
 		;
 
-dec : 		TYPES text 
+dec : 	TYPES text 
 		{	
 			$$ = $2;
 		}
 		;
 
-bool : 	 	expr REL_OPT expr
+bool : 	expr REL_OPT expr
 		{
 			temp = (char *)malloc(strlen($1->code)+strlen($3->code)+50);
 			temp[0] = 0;
@@ -501,8 +503,8 @@ bool : 	 	expr REL_OPT expr
 		{
 			b1 = $1;
 			b2 = $3;
-			label = newLabel();
-			replace(b1,"FAIL",label);
+			label = generateNewLabel();
+			backpatch(b1,"FAIL",label);
 			temp = (char *)malloc(strlen(b1)+strlen(b2)+10);
 			temp[0] = 0;
 			strcat(temp,b1);
@@ -510,7 +512,6 @@ bool : 	 	expr REL_OPT expr
 			strcat(temp,label);
 			strcat(temp," : ");
 			strcat(temp,b2);
-
 			$$ = temp;
 		}
 		|
@@ -518,8 +519,8 @@ bool : 	 	expr REL_OPT expr
 		{
 			b1 = $1;
 			b2 = $3;
-			label = newLabel();
-			replace(b1,"TRUE",label);
+			label = generateNewLabel();
+			backpatch(b1,"TRUE",label);
 			temp = (char *)malloc(strlen(b1)+strlen(b2)+10);
 			temp[0] = 0;
 			strcat(temp,b1);
@@ -533,11 +534,11 @@ bool : 	 	expr REL_OPT expr
 		NOT '(' bool ')'
 		{	b1 = $3;
 			label = "TEFS";
-			replace(b1,"TRUE","TEFS");
+			backpatch(b1,"TRUE","TEFS");
 			label = "TRUE";
-			replace(b1,"FAIL",label);
+			backpatch(b1,"FAIL",label);
 			label = "FAIL";
-			replace(b1,"TEFS","FAIL");
+			backpatch(b1,"TEFS","FAIL");
 			$$ = b1;
 		}
 		|
@@ -564,195 +565,171 @@ bool : 	 	expr REL_OPT expr
 		}
 		;
 
-expr:    '(' expr ')'
-         {
+expr:   '(' expr ')'
+        {
            $$ = $2;
-         }
+        }
 		|
 		unary
 		{
 			$$ = $1;
 		}
 		|
-         expr '*' expr
-         {
-	   	to_return_expr = (struct exprType *)malloc(sizeof(struct exprType));
-		to_return_expr->addr = (char *)malloc(20);
-		to_return_expr->addr = newTemp();
-		
-		ret = (char *)malloc(200);
-		ret[0] = 0;
-
-		strcat(ret,to_return_expr->addr);
-		strcat(ret,"=");
-		strcat(ret,$1->addr);
-		strcat(ret,"*");
-		strcat(ret,$3->addr);
-		temp = (char *)malloc(strlen($1->code)+strlen($3->code)+strlen(ret)+60);
-		temp[0] = 0;
-		
-		if ($1->code[0]!=0)
-		{
-			strcat(temp,$1->code);strcat(temp,"\n");
-		}
-		if ($3->code[0]!=0)
-		{
-			strcat(temp,$3->code);strcat(temp,"\n");
-		}
-		strcat(temp,ret);
-		to_return_expr->code = temp;
-		$$ = to_return_expr;
+        expr '*' expr
+        {
+	   		to_return_expr = (struct exprType *)malloc(sizeof(struct exprType));
+			to_return_expr->addr = (char *)malloc(20);
+			to_return_expr->addr = generateNewTemporary();
+			ret = (char *)malloc(200);
+			ret[0] = 0;
+			strcat(ret,to_return_expr->addr);
+			strcat(ret,"=");
+			strcat(ret,$1->addr);
+			strcat(ret,"*");
+			strcat(ret,$3->addr);
+			temp = (char *)malloc(strlen($1->code)+strlen($3->code)+strlen(ret)+60);
+			temp[0] = 0;
+			if ($1->code[0]!=0)
+			{
+				strcat(temp,$1->code);strcat(temp,"\n");
+			}
+			if ($3->code[0]!=0)
+			{
+				strcat(temp,$3->code);strcat(temp,"\n");
+			}
+			strcat(temp,ret);
+			to_return_expr->code = temp;
+			$$ = to_return_expr;
         }
-         |
-         expr '/' expr
-         {
-         to_return_expr = (struct exprType *)malloc(sizeof(struct exprType));
-		to_return_expr->addr = (char *)malloc(20);
-		to_return_expr->addr = newTemp();
-		
-		ret = (char *)malloc(200);
-		ret[0] = 0;
-
-		strcat(ret,to_return_expr->addr);
-		strcat(ret,"=");
-		strcat(ret,$1->addr);
-		strcat(ret,"/");
-		strcat(ret,$3->addr);
-		temp = (char *)malloc(strlen($1->code)+strlen($3->code)+strlen(ret)+60);
-		temp[0] = 0;
-		
-		if ($1->code[0]!=0)
-		{
-			strcat(temp,$1->code);strcat(temp,"\n");
-		}
-		if ($3->code[0]!=0)
-		{
-			strcat(temp,$3->code);strcat(temp,"\n");
-		}
-		strcat(temp,ret);
-		to_return_expr->code = temp;
-		$$ = to_return_expr;
+        |
+        expr '/' expr
+        {
+        	to_return_expr = (struct exprType *)malloc(sizeof(struct exprType));
+			to_return_expr->addr = (char *)malloc(20);
+			to_return_expr->addr = generateNewTemporary();
+			ret = (char *)malloc(200);
+			ret[0] = 0;
+			strcat(ret,to_return_expr->addr);
+			strcat(ret,"=");
+			strcat(ret,$1->addr);
+			strcat(ret,"/");
+			strcat(ret,$3->addr);
+			temp = (char *)malloc(strlen($1->code)+strlen($3->code)+strlen(ret)+60);
+			temp[0] = 0;
+			if ($1->code[0]!=0)
+			{
+				strcat(temp,$1->code);strcat(temp,"\n");
+			}
+			if ($3->code[0]!=0)
+			{
+				strcat(temp,$3->code);strcat(temp,"\n");
+			}
+			strcat(temp,ret);
+			to_return_expr->code = temp;
+			$$ = to_return_expr;
 	   	}
-         |
-         expr '%' expr
-         {
-	   	to_return_expr = (struct exprType *)malloc(sizeof(struct exprType));
-		to_return_expr->addr = (char *)malloc(200);
-		to_return_expr->addr = newTemp();
-		
-		ret = (char *)malloc(20);
-		ret[0] = 0;
-
-		strcat(ret,to_return_expr->addr);strcat(ret,"=");
-		strcat(ret,$1->addr);
-		strcat(ret,"%");
-		strcat(ret,$3->addr);
-		temp = (char *)malloc(strlen($1->code)+strlen($3->code)+strlen(ret)+6);
-		temp[0] = 0;
-		
-		if ($1->code[0]!=0)
-		{
-			strcat(temp,$1->code);
-			strcat(temp,"\n");
-		}
-		if ($3->code[0]!=0)
-		{
-			strcat(temp,$3->code);
-			strcat(temp,"\n");
-		}
-		strcat(temp,ret);
-		to_return_expr->code = temp;
-		$$ = to_return_expr;
-         }
-         |
-         expr '+' expr
-         {
-	   	to_return_expr = (struct exprType *)malloc(sizeof(struct exprType));
-		to_return_expr->addr = (char *)malloc(200);
-		to_return_expr->addr = newTemp();
-
-		ret = (char *)malloc(20);
-		ret[0] = 0;
-
-		strcat(ret,to_return_expr->addr);
-
-		strcat(ret,"=");
-		strcat(ret,$1->addr);
-		strcat(ret,"+");
-		strcat(ret,$3->addr);
-		temp = (char *)malloc(strlen($1->code)+strlen($3->code)+strlen(ret)+60);temp[0] = 0;
-		
-		if ($1->code[0]!=0)
-		{
-			strcat(temp,$1->code);strcat(temp,"\n");
-		}
-		if ($3->code[0]!=0)
-		{
-			strcat(temp,$3->code);strcat(temp,"\n");
-		}
-		strcat(temp,ret);
-		to_return_expr->code = temp;
-		$$ = to_return_expr;
-         }
-         |
-         expr '-' expr
-         {
+        |
+        expr '%' expr
+        {
+	   		to_return_expr = (struct exprType *)malloc(sizeof(struct exprType));
+			to_return_expr->addr = (char *)malloc(200);
+			to_return_expr->addr = generateNewTemporary();
+			ret = (char *)malloc(20);
+			ret[0] = 0;
+			strcat(ret,to_return_expr->addr);strcat(ret,"=");
+			strcat(ret,$1->addr);
+			strcat(ret,"%");
+			strcat(ret,$3->addr);
+			temp = (char *)malloc(strlen($1->code)+strlen($3->code)+strlen(ret)+6);
+			temp[0] = 0;
+			if ($1->code[0]!=0)
+			{
+				strcat(temp,$1->code);
+				strcat(temp,"\n");
+			}
+			if ($3->code[0]!=0)
+			{
+				strcat(temp,$3->code);
+				strcat(temp,"\n");
+			}
+			strcat(temp,ret);
+			to_return_expr->code = temp;
+			$$ = to_return_expr;
+        }
+        |
+        expr '+' expr
+        {
+	   		to_return_expr = (struct exprType *)malloc(sizeof(struct exprType));
+			to_return_expr->addr = (char *)malloc(200);
+			to_return_expr->addr = generateNewTemporary();
+			ret = (char *)malloc(20);
+			ret[0] = 0;
+			strcat(ret,to_return_expr->addr);
+			strcat(ret,"=");
+			strcat(ret,$1->addr);
+			strcat(ret,"+");
+			strcat(ret,$3->addr);
+			temp = (char *)malloc(strlen($1->code)+strlen($3->code)+strlen(ret)+60);temp[0] = 0;
+			if ($1->code[0]!=0)
+			{
+				strcat(temp,$1->code);strcat(temp,"\n");
+			}
+			if ($3->code[0]!=0)
+			{
+				strcat(temp,$3->code);strcat(temp,"\n");
+			}
+			strcat(temp,ret);
+			to_return_expr->code = temp;
+			$$ = to_return_expr;
+        }
+        |
+        expr '-' expr
+        {
 	   
-        to_return_expr = (struct exprType *)malloc(sizeof(struct exprType));
-		to_return_expr->addr = (char *)malloc(200);
-		to_return_expr->addr = newTemp();
-
-		ret = (char *)malloc(200);
-		ret[0] = 0;
-
-		strcat(ret,to_return_expr->addr);
-
-		strcat(ret,"=");
-		strcat(ret,$1->addr);
-		strcat(ret,"-");
-		strcat(ret,$3->addr);
-		
-		temp = (char *)malloc(strlen($1->code)+strlen($3->code)+strlen(ret)+60);
-
-		temp[0] = 0;
-		
-		if ($1->code[0]!=0)
-		{
-			strcat(temp,$1->code);
-			strcat(temp,"\n");
-		}
-		if ($3->code[0]!=0)
-		{
-			strcat(temp,$3->code);
-			strcat(temp,"\n");
-		}
-		strcat(temp,ret);
-		
-		to_return_expr->code = temp;
-
+        	to_return_expr = (struct exprType *)malloc(sizeof(struct exprType));
+			to_return_expr->addr = (char *)malloc(200);
+			to_return_expr->addr = generateNewTemporary();
+			ret = (char *)malloc(200);
+			ret[0] = 0;
+			strcat(ret,to_return_expr->addr);
+			strcat(ret,"=");
+			strcat(ret,$1->addr);
+			strcat(ret,"-");
+			strcat(ret,$3->addr);
+			temp = (char *)malloc(strlen($1->code)+strlen($3->code)+strlen(ret)+60);
+			temp[0] = 0;
+			if ($1->code[0]!=0)
+			{
+				strcat(temp,$1->code);
+				strcat(temp,"\n");
+			}
+			if ($3->code[0]!=0)
+			{
+				strcat(temp,$3->code);
+				strcat(temp,"\n");
+			}
+			strcat(temp,ret);
+			to_return_expr->code = temp;
            	$$ = to_return_expr;
 		
-         }
-         |
-	 text {
-		to_return_expr = (struct exprType *)malloc(sizeof(struct exprType));
-		to_return_expr->addr = (char *)malloc(20);
-		to_return_expr->addr = $1;
-
-		to_return_expr->code = (char *)malloc(2);
-		to_return_expr->code[0] = 0;
-
-		$$ = to_return_expr;}
+        }
+        |
+		text 
+		{
+			to_return_expr = (struct exprType *)malloc(sizeof(struct exprType));
+			to_return_expr->addr = (char *)malloc(20);
+			to_return_expr->addr = $1;
+			to_return_expr->code = (char *)malloc(2);
+			to_return_expr->code[0] = 0;
+			$$ = to_return_expr;}
          |
          number 
          {
 			to_return_expr = (struct exprType *)malloc(sizeof(struct exprType));
 			to_return_expr->addr = (char *)malloc(20);
 			to_return_expr->addr = $1;
-			
 			to_return_expr->code = (char *)malloc(2);
 			to_return_expr->code[0] = 0;
-			
 			$$ = to_return_expr;
 		}
 		|
@@ -760,7 +737,7 @@ expr:    '(' expr ')'
 		{
 			to_return_expr = (struct exprType *)malloc(sizeof(struct exprType));
 			to_return_expr->addr = (char *)malloc(20);
-			label = newTemp();
+			label = generateNewTemporary();
 			to_return_expr->addr = label;
 			ret = (char *)malloc(20);
 			ret[0] = 0;
@@ -775,7 +752,7 @@ expr:    '(' expr ')'
 		{
 			to_return_expr = (struct exprType *)malloc(sizeof(struct exprType));
 			to_return_expr->addr = (char *)malloc(200);
-			to_return_expr->addr = newTemp();
+			to_return_expr->addr = generateNewTemporary();
 			ret = (char *)malloc(20);
 			ret[0] = 0;
 			strcat(ret,$1);
@@ -801,7 +778,6 @@ list_expr:  list_expr ',' expr
 				strcat(to_return_expr->code,$1->code);
 				strcat(to_return_expr->code,"\n");
 				strcat(to_return_expr->code,$3->code);
-
 				$$ = to_return_expr;
 			}
 			|
@@ -810,7 +786,6 @@ list_expr:  list_expr ',' expr
 				to_return_expr = (struct exprType *)malloc(sizeof(struct exprType));
 				to_return_expr->code = (char*)malloc(600*sizeof(char));
 				strcat(to_return_expr->code,$1->code);
-
 				$$ = to_return_expr;
 			}
 			;
@@ -821,20 +796,19 @@ text: 	ID
 	  ;
 
 number:  DIGIT
-         {
+        {
 			var = (char *)malloc(20);
 	        snprintf(var, 10,"%d",$1);
 			$$ = var;
-         } 
-	 |
-         FLOAT
-         {
-		
+        } 
+	 	|
+        FLOAT
+        {
 			var = (char *)malloc(20);
 	        snprintf(var, 10,"%f",$1);
 			$$ = var;
            
-         } 
+        } 
 	;
 	
 %%
