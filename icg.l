@@ -33,41 +33,41 @@ TYPES ["int" "unsigned_int" "double"]
 "long"								{ return (TYPES); }
 "char"								{ return (TYPES); }
 "double"							{ return (TYPES); }
-"++"								{yylval.sval = strdup(yytext); return INCR;}
-"--" 								{yylval.sval=strdup(yytext); return DECR;}
-"+="								{yylval.sval=strdup(yytext); return PE;}
-"-="								{yylval.sval=strdup(yytext); return ME;}
-">"									{yylval.sval = strdup(yytext);
+"++"								{yylval.string_val = strdup(yytext); return INCR;}
+"--" 								{yylval.string_val=strdup(yytext); return DECR;}
+"+="								{yylval.string_val=strdup(yytext); return PE;}
+"-="								{yylval.string_val=strdup(yytext); return ME;}
+">"									{yylval.string_val = strdup(yytext);
 									return (REL_OPT);}
-"<"									{yylval.sval = strdup(yytext);
+"<"									{yylval.string_val = strdup(yytext);
 									return (REL_OPT);}
-">="								{yylval.sval = strdup(yytext);
+">="								{yylval.string_val = strdup(yytext);
 									return (REL_OPT);}
-"<="								{yylval.sval = strdup(yytext);
+"<="								{yylval.string_val = strdup(yytext);
 									return (REL_OPT);}
-"!="								{yylval.sval = strdup(yytext);
+"!="								{yylval.string_val = strdup(yytext);
 									return (REL_OPT);}
-"=="								{yylval.sval = strdup(yytext);
+"=="								{yylval.string_val = strdup(yytext);
 									return (REL_OPT);}
 	
-"||"								{yylval.sval = strdup(yytext);
+"||"								{yylval.string_val = strdup(yytext);
 									return (OR);}
-"&&"								{yylval.sval = strdup(yytext);
+"&&"								{yylval.string_val = strdup(yytext);
 									return (AND);}
-"!"									{yylval.sval = strdup(yytext);
+"!"									{yylval.string_val = strdup(yytext);
 									return (NOT);}
-"true"								{yylval.sval = strdup(yytext);
+"true"								{yylval.string_val = strdup(yytext);
 									return (TRUE);}
-"false"								{yylval.sval = strdup(yytext);
+"false"								{yylval.string_val = strdup(yytext);
 									return (FALSE);}
 
-{DIGIT}  							{ yylval.ival = atoi(yytext);
+{DIGIT}  							{ yylval.int_val = atoi(yytext);
 	   								return DIGIT; }
 
-{FLOAT}  							{ yylval.fval = atof(yytext);
+{FLOAT}  							{ yylval.float_val = atof(yytext);
 	   								return FLOAT; }
 
-{ID} 								{yylval.sval = strdup(yytext);return ID; }
+{ID} 								{yylval.string_val = strdup(yytext);return ID; }
 {ARITHMETIC_OPERATORS}   			{c = yytext[0];return(c);}
 {BITWISE_OPERATORS}					{c=yytext[0]; return (c);}
 {OTHER_CHARACTERS}   				{c = yytext[0];return(c);}

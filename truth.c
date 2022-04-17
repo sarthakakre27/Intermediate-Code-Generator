@@ -6,6 +6,7 @@ int main()
         for(a>2>b; b < a; b<2)
         {
             c = 0;
+            c = (a < b) + 2;
         }
     }
 
