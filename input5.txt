@@ -1,5 +1,6 @@
 for(a = b*d/2, a = b*d/2; a < 10; a=2)
 {
+    int z = 10;
     a++;
     for(a=9;b<c;a++)
     {

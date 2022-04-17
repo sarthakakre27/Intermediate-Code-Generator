@@ -6,7 +6,7 @@
 
 struct expression_type{
 
-	char* addr;
+	char* address;
 	char* code;
 	
 };
@@ -79,8 +79,8 @@ void backpatch(char* s1,char* str, char* label)
 %token<float_val> FLOAT
 %token<string_val> ID IF ELSE WHILE TYPES  REL_OPT OR AND NOT PE ME INCR DEFAULT DECR TRUE FALSE BREAK FOR
 %token<string_val> '+' '-' '*' '/' '^' '%' '\n' '=' ';' ':' '&' '|' ','
-%type<string_val> list_stats text number construct  block_stats dec boolean program Start
-%type<EXPRTYPE> expression stat list_expr unary
+%type<string_val> list_of_statements identifier number construct  block_stats declaration boolean program Start
+%type<EXPRTYPE> expression statement list_expr unary
 
 %left OR
 %left AND
@@ -102,8 +102,8 @@ Start:	program
 			strcat(return_val,s1);
 			strcat(return_val,"\n");
 			strcat(return_val,label);
-			strcat(return_val," : END OF THREE ADDRESS CODE !!!!!\n");
-			printf("\n----------  FINAL THREE ADDRESS CODE ----------\n");
+			strcat(return_val," : END OF THREE ADDRESS CODE \n");
+			printf("\n----------  START OF THREE ADDRESS CODE ----------\n");
 			puts(return_val);
 			$$ = return_val;
 		}
@@ -228,7 +228,7 @@ construct :     block_stats
 		}
 		;
 
-block_stats:	'{' list_stats '}'
+block_stats:	'{' list_of_statements '}'
 		{
 			$$ = $2;
 		}
@@ -238,19 +238,19 @@ block_stats:	'{' list_stats '}'
 			$$ = $2;
 		}
 		|
-		list_stats 
+		list_of_statements 
 		{
 			$$ = $1;
 		}
 		;
 	 
 
-list_stats:   stat
+list_of_statements:   statement
 		{
 			$$ = $1->code;
 		}
         |
-        list_stats stat
+        list_of_statements statement
 		{
 			return_val = (char*)malloc(strlen($1) + strlen($2->code) + 4);
 			return_val[0] = 0;
@@ -260,47 +260,47 @@ list_stats:   stat
 			$$ = return_val;
 		}
 	 	|
-        list_stats error '\n'
+        list_of_statements error '\n'
         {
         	yyerrok;
         }
         ;
 
 
-stat:   ';'
+statement:   ';'
 	 	{
 			expression_ret = (struct expression_type*)malloc(sizeof(struct expression_type));
-			expression_ret->addr = (char*)malloc(20);
-			expression_ret->addr = $1;
+			expression_ret->address = (char*)malloc(20);
+			expression_ret->address = $1;
 			expression_ret->code = (char*)malloc(2);
 			expression_ret->code[0] = 0;
 			$$ = expression_ret;
 	 	}
 	 	|
-	 	unary 
+	 	unary ';'
 	 	{
 			 $$ = $1;
 	 	}
 	 	|
-	 	dec ';'
+	 	declaration ';'
         {
 			expression_ret = (struct expression_type*)malloc(sizeof(struct expression_type));
-			expression_ret->addr = (char*)malloc(200);
-			expression_ret->addr = $1;
+			expression_ret->address = (char*)malloc(200);
+			expression_ret->address = $1;
 			expression_ret->code = (char*)malloc(2);
 			expression_ret->code[0] = 0;
 			$$ = expression_ret;
         }
 		|
-        text '=' expression ';'
+        identifier '=' expression ';'
         {
 			expression_ret = (struct expression_type*)malloc(sizeof(struct expression_type));
-			expression_ret->addr = (char*)malloc(200);
-			expression_ret->addr = generateNewTemporary();
+			expression_ret->address = (char*)malloc(200);
+			expression_ret->address = generateNewTemporary();
 			return_val = (char*)malloc(20);
 			return_val[0] = 0;
 			strcat(return_val,$1);strcat(return_val,"=");
-			strcat(return_val,$3->addr);
+			strcat(return_val,$3->address);
 			temp = (char*)malloc(strlen($3->code)+strlen(return_val)+60);
 			temp[0] = 0;
 			if ($3->code[0]!=0)
@@ -313,20 +313,20 @@ stat:   ';'
 			$$ = expression_ret;
         }
         |
-        text PE expression ';'
+        identifier PE expression ';'
         {
 	        expression_ret = (struct expression_type*)malloc(sizeof(struct expression_type));
-			expression_ret->addr = (char*)malloc(20);
-			expression_ret->addr = generateNewTemporary();
+			expression_ret->address = (char*)malloc(20);
+			expression_ret->address = generateNewTemporary();
 			return_val = (char*)malloc(200);
 			return_val[0] = 0;
 			strcat(return_val,$1);
 			strcat(return_val,"="); 
 			strcat(return_val,$1);
 			strcat(return_val,"+"); 
-			strcat(return_val,$3->addr); 
+			strcat(return_val,$3->address); 
 			strcat(return_val,"\n");
-			strcat(return_val,expression_ret->addr); 
+			strcat(return_val,expression_ret->address); 
 			strcat(return_val,"=");
 			strcat(return_val,$1);
 			temp = (char*)malloc(strlen($3->code) + strlen(return_val)+60);
@@ -341,20 +341,20 @@ stat:   ';'
 			$$ = expression_ret;
          }
          |
-         text ME expression ';'
+         identifier ME expression ';'
          {
 			expression_ret = (struct expression_type*)malloc(sizeof(struct expression_type));
-			expression_ret->addr = (char*)malloc(20);
-			expression_ret->addr = generateNewTemporary();
+			expression_ret->address = (char*)malloc(20);
+			expression_ret->address = generateNewTemporary();
 			return_val = (char*)malloc(20);
 			return_val[0] = 0;
 			strcat(return_val,$1);
 			strcat(return_val,"="); 
 			strcat(return_val,$1);
 			strcat(return_val,"-"); 
-			strcat(return_val,$3->addr);
+			strcat(return_val,$3->address);
 			strcat(return_val,"\n");
-			strcat(return_val,expression_ret->addr); 
+			strcat(return_val,expression_ret->address); 
 			strcat(return_val,"=");
 			strcat(return_val,$1);
 			temp = (char*)malloc(strlen($3->code)+strlen(return_val)+6);
@@ -370,16 +370,16 @@ stat:   ';'
 			$$ = expression_ret;
         }
 	 	|
-	 	dec '=' expression ';'
+	 	declaration '=' expression ';'
         {
 			expression_ret = (struct expression_type*)malloc(sizeof(struct expression_type));
-			expression_ret->addr = (char*)malloc(200);
-			expression_ret->addr = generateNewTemporary();
+			expression_ret->address = (char*)malloc(200);
+			expression_ret->address = generateNewTemporary();
 			return_val = (char*)malloc(200);
 			return_val[0] = 0;
 			strcat(return_val,$1);
 			strcat(return_val,"=");
-			strcat(return_val,$3->addr);
+			strcat(return_val,$3->address);
 			temp = (char*)malloc(strlen($1)+strlen($3->code)+strlen(return_val)+6);
 			temp[0] = 0;
 			if ($3->code[0]!=0)
@@ -393,14 +393,14 @@ stat:   ';'
         }
         ;
 
-unary : text INCR
+unary : identifier INCR
 		{
 			expression_ret = (struct expression_type*)malloc(sizeof(struct expression_type));
-			expression_ret->addr = (char*)malloc(20);
-			expression_ret->addr = generateNewTemporary();
+			expression_ret->address = (char*)malloc(20);
+			expression_ret->address = generateNewTemporary();
 			return_val = (char*)malloc(20);
 			return_val[0] = 0;
-			strcat(return_val,expression_ret->addr);
+			strcat(return_val,expression_ret->address);
 			strcat(return_val,"=");
 			strcat(return_val,$1);
 			strcat(return_val,"\n"); 
@@ -415,14 +415,14 @@ unary : text INCR
 
 		}
 		|
-		text DECR
+		identifier DECR
 		{
 			expression_ret = (struct expression_type*)malloc(sizeof(struct expression_type));
-			expression_ret->addr = (char*)malloc(20);
-			expression_ret->addr = generateNewTemporary();
+			expression_ret->address = (char*)malloc(20);
+			expression_ret->address = generateNewTemporary();
 			return_val = (char*)malloc(20);
 			return_val[0] = 0;
-			strcat(return_val,expression_ret->addr);strcat(return_val,"=");
+			strcat(return_val,expression_ret->address);strcat(return_val,"=");
 			strcat(return_val,$1);
 			strcat(return_val,"\n"); 
 			strcat(return_val,$1); 
@@ -437,12 +437,12 @@ unary : text INCR
 
 		}
 		|
-		INCR text
+		INCR identifier
 		{
 			
 	        expression_ret = (struct expression_type*)malloc(sizeof(struct expression_type));
-			expression_ret->addr = (char*)malloc(20);
-			expression_ret->addr = generateNewTemporary();
+			expression_ret->address = (char*)malloc(20);
+			expression_ret->address = generateNewTemporary();
 			return_val = (char*)malloc(20);
 			return_val[0] = 0;
 			strcat(return_val,$2);
@@ -450,7 +450,7 @@ unary : text INCR
 			strcat(return_val,$2);
 			strcat(return_val,"+1");
 			strcat(return_val,"\n");
-			strcat(return_val,expression_ret->addr);
+			strcat(return_val,expression_ret->address);
 			strcat(return_val,"=");
 			strcat(return_val,$2);
 			temp = (char*)malloc(strlen(return_val)+20);
@@ -461,12 +461,12 @@ unary : text INCR
 
 		}
 		|
-		DECR text
+		DECR identifier
 
 		{
 			expression_ret = (struct expression_type*)malloc(sizeof(struct expression_type));
-			expression_ret->addr = (char*)malloc(20);
-			expression_ret->addr = generateNewTemporary();
+			expression_ret->address = (char*)malloc(20);
+			expression_ret->address = generateNewTemporary();
 			return_val = (char*)malloc(20);
 			return_val[0] = 0;
 			strcat(return_val,$2);
@@ -474,7 +474,7 @@ unary : text INCR
 			strcat(return_val,$2);
 			strcat(return_val,"-1");
 			strcat(return_val,"\n");
-			strcat(return_val,expression_ret->addr);
+			strcat(return_val,expression_ret->address);
 			strcat(return_val,"=");
 			strcat(return_val,$2);
 			temp = (char*)malloc(strlen(return_val)+20);
@@ -486,7 +486,7 @@ unary : text INCR
 		}
 		;
 
-dec : 	TYPES text 
+declaration : 	TYPES identifier 
 		{	
 			$$ = $2;
 		}
@@ -509,9 +509,9 @@ boolean : 	expression REL_OPT expression
 			return_val = (char*)malloc(50);
 			return_val[0] = 0;
 			strcat(return_val,"if(");
-			strcat(return_val,$1->addr);
+			strcat(return_val,$1->address);
 			strcat(return_val,$2);
-			strcat(return_val,$3->addr);
+			strcat(return_val,$3->address);
 			strcat(return_val,") goto TRUE \n goto FAIL");
 			strcat(temp,return_val);
 			$$ = temp;
@@ -596,15 +596,15 @@ expression:   '(' expression ')'
         expression '*' expression
         {
 	   		expression_ret = (struct expression_type*)malloc(sizeof(struct expression_type));
-			expression_ret->addr = (char*)malloc(20);
-			expression_ret->addr = generateNewTemporary();
+			expression_ret->address = (char*)malloc(20);
+			expression_ret->address = generateNewTemporary();
 			return_val = (char*)malloc(200);
 			return_val[0] = 0;
-			strcat(return_val,expression_ret->addr);
+			strcat(return_val,expression_ret->address);
 			strcat(return_val,"=");
-			strcat(return_val,$1->addr);
+			strcat(return_val,$1->address);
 			strcat(return_val,"*");
-			strcat(return_val,$3->addr);
+			strcat(return_val,$3->address);
 			temp = (char*)malloc(strlen($1->code)+strlen($3->code)+strlen(return_val)+60);
 			temp[0] = 0;
 			if ($1->code[0]!=0)
@@ -623,15 +623,15 @@ expression:   '(' expression ')'
         expression '/' expression
         {
         	expression_ret = (struct expression_type*)malloc(sizeof(struct expression_type));
-			expression_ret->addr = (char*)malloc(20);
-			expression_ret->addr = generateNewTemporary();
+			expression_ret->address = (char*)malloc(20);
+			expression_ret->address = generateNewTemporary();
 			return_val = (char*)malloc(200);
 			return_val[0] = 0;
-			strcat(return_val,expression_ret->addr);
+			strcat(return_val,expression_ret->address);
 			strcat(return_val,"=");
-			strcat(return_val,$1->addr);
+			strcat(return_val,$1->address);
 			strcat(return_val,"/");
-			strcat(return_val,$3->addr);
+			strcat(return_val,$3->address);
 			temp = (char*)malloc(strlen($1->code)+strlen($3->code)+strlen(return_val)+60);
 			temp[0] = 0;
 			if ($1->code[0]!=0)
@@ -650,14 +650,14 @@ expression:   '(' expression ')'
         expression '%' expression
         {
 	   		expression_ret = (struct expression_type*)malloc(sizeof(struct expression_type));
-			expression_ret->addr = (char*)malloc(200);
-			expression_ret->addr = generateNewTemporary();
+			expression_ret->address = (char*)malloc(200);
+			expression_ret->address = generateNewTemporary();
 			return_val = (char*)malloc(20);
 			return_val[0] = 0;
-			strcat(return_val,expression_ret->addr);strcat(return_val,"=");
-			strcat(return_val,$1->addr);
+			strcat(return_val,expression_ret->address);strcat(return_val,"=");
+			strcat(return_val,$1->address);
 			strcat(return_val,"%");
-			strcat(return_val,$3->addr);
+			strcat(return_val,$3->address);
 			temp = (char*)malloc(strlen($1->code)+strlen($3->code)+strlen(return_val)+6);
 			temp[0] = 0;
 			if ($1->code[0]!=0)
@@ -678,15 +678,15 @@ expression:   '(' expression ')'
         expression '+' expression
         {
 	   		expression_ret = (struct expression_type*)malloc(sizeof(struct expression_type));
-			expression_ret->addr = (char*)malloc(200);
-			expression_ret->addr = generateNewTemporary();
+			expression_ret->address = (char*)malloc(200);
+			expression_ret->address = generateNewTemporary();
 			return_val = (char*)malloc(20);
 			return_val[0] = 0;
-			strcat(return_val,expression_ret->addr);
+			strcat(return_val,expression_ret->address);
 			strcat(return_val,"=");
-			strcat(return_val,$1->addr);
+			strcat(return_val,$1->address);
 			strcat(return_val,"+");
-			strcat(return_val,$3->addr);
+			strcat(return_val,$3->address);
 			temp = (char*)malloc(strlen($1->code)+strlen($3->code)+strlen(return_val)+60);temp[0] = 0;
 			if ($1->code[0]!=0)
 			{
@@ -705,15 +705,15 @@ expression:   '(' expression ')'
         {
 	   
         	expression_ret = (struct expression_type*)malloc(sizeof(struct expression_type));
-			expression_ret->addr = (char*)malloc(200);
-			expression_ret->addr = generateNewTemporary();
+			expression_ret->address = (char*)malloc(200);
+			expression_ret->address = generateNewTemporary();
 			return_val = (char*)malloc(200);
 			return_val[0] = 0;
-			strcat(return_val,expression_ret->addr);
+			strcat(return_val,expression_ret->address);
 			strcat(return_val,"=");
-			strcat(return_val,$1->addr);
+			strcat(return_val,$1->address);
 			strcat(return_val,"-");
-			strcat(return_val,$3->addr);
+			strcat(return_val,$3->address);
 			temp = (char*)malloc(strlen($1->code)+strlen($3->code)+strlen(return_val)+60);
 			temp[0] = 0;
 			if ($1->code[0]!=0)
@@ -732,11 +732,11 @@ expression:   '(' expression ')'
 		
         }
         |
-		text 
+		identifier 
 		{
 			expression_ret = (struct expression_type*)malloc(sizeof(struct expression_type));
-			expression_ret->addr = (char*)malloc(20);
-			expression_ret->addr = $1;
+			expression_ret->address = (char*)malloc(20);
+			expression_ret->address = $1;
 			expression_ret->code = (char*)malloc(2);
 			expression_ret->code[0] = 0;
 			$$ = expression_ret;}
@@ -744,8 +744,8 @@ expression:   '(' expression ')'
          number 
          {
 			expression_ret = (struct expression_type*)malloc(sizeof(struct expression_type));
-			expression_ret->addr = (char*)malloc(20);
-			expression_ret->addr = $1;
+			expression_ret->address = (char*)malloc(20);
+			expression_ret->address = $1;
 			expression_ret->code = (char*)malloc(2);
 			expression_ret->code[0] = 0;
 			$$ = expression_ret;
@@ -754,9 +754,9 @@ expression:   '(' expression ')'
 		'-' number
 		{
 			expression_ret = (struct expression_type*)malloc(sizeof(struct expression_type));
-			expression_ret->addr = (char*)malloc(20);
+			expression_ret->address = (char*)malloc(20);
 			label = generateNewTemporary();
-			expression_ret->addr = label;
+			expression_ret->address = label;
 			return_val = (char*)malloc(20);
 			return_val[0] = 0;
 			strcat(return_val,label);
@@ -766,16 +766,16 @@ expression:   '(' expression ')'
 			$$ = expression_ret;
 		}
 		|
-		text '=' expression
+		identifier '=' expression
 		{
 			expression_ret = (struct expression_type*)malloc(sizeof(struct expression_type));
-			expression_ret->addr = (char*)malloc(200);
-			expression_ret->addr = generateNewTemporary();
+			expression_ret->address = (char*)malloc(200);
+			expression_ret->address = generateNewTemporary();
 			return_val = (char*)malloc(20);
 			return_val[0] = 0;
 			strcat(return_val,$1);
 			strcat(return_val,"=");
-			strcat(return_val,$3->addr);
+			strcat(return_val,$3->address);
 			temp = (char*)malloc(strlen($3->code)+strlen(return_val)+60);
 			temp[0] = 0;
 			if ($3->code[0]!=0)
@@ -807,7 +807,7 @@ list_expr:  list_expr ',' expression
 				$$ = expression_ret;
 			}
 			;
-text: 	ID
+identifier: 	ID
          {
 			$$ = $1;
          }
@@ -837,7 +837,7 @@ extern FILE* yyin;
 
 int main() {
 	// open a file handle to a particular file:
-	FILE* myfile = fopen("input5.txt", "r");
+	FILE* myfile = fopen("input9.txt", "r");
 	// make sure it is valid:
 	if (!myfile) {
 		printf("I can't open a.snazzle.file!");
