@@ -10,12 +10,15 @@ struct expression_type{
 	char* code;
 	
 };
+
+int symTable[52];
+
 extern int yylineno; //for error line printing
 int num_temp = 1;	//Stores the number of the last temporary variable used
 int num_label = 1; //Stores the number of the last label used
 char* var;
-char buffer_temporary_num_concat[10]; //buffers to generate temporary and label
-char buffer_label_num_concat[10];
+char buffer_temporary_num_concat[30]; //buffers to generate temporary and label
+char buffer_label_num_concat[30];
 char* return_val;
 char* temp;
 char* label; //variables for storing label strings
@@ -27,9 +30,11 @@ char* b1;//variables for storing boolean strings
 char* b2;
 char* s1;//variables for storing statement strings
 char* s2;
+char tempo[30];
 struct expression_type* expression_ret;	//To store the code and address corresponding to generation of expression and statements
 void yyerror(char* s);// function for error handling
 int yylex(void);
+void checkSymTable(char* ch);
 
 //Function to generate new temporary variables
 char* generateNewTemporary()
@@ -86,10 +91,11 @@ void backpatch(char* s1,char* str, char* label)
 %left AND
 %left NOT
 %left REL_OPT
-%left '|' '&' '^'
+%left '|' '&'
 %right '='
 %left '+' '-'
 %left '*' '/' '%'
+%right '^'
 %%
 
 Start:	program
@@ -162,6 +168,11 @@ construct :     block_stats
 	
 		}
 		|
+		WHILE '(' error ')' block_stats 
+		{
+			yyerror("error in while condition");
+		}
+		|
 		IF '(' boolean ')' block_stats
 		{
 			label = generateNewLabel();
@@ -202,6 +213,11 @@ construct :     block_stats
 			$$ = return_val;
 		}
 		|
+		IF '(' error ')' block_stats ELSE block_stats
+		{
+			yyerror("error in if condition");
+		}
+		|
 		FOR '(' list_expr ';'  boolean ';' list_expr ')' block_stats
 		{
 			b1 = $5;
@@ -225,6 +241,21 @@ construct :     block_stats
 			strcat(return_val,"goto ");
 			strcat(return_val,begin_construct_label);
 			$$ = return_val;
+		}
+		|
+		FOR '(' error ';'  boolean ';' list_expr ')' block_stats
+		{
+			yyerror("error in for loop");
+		}
+		|
+		FOR '(' list_expr ';'  error ';' list_expr ')' block_stats
+		{
+			yyerror("error in for loop");
+		}
+		|
+		FOR '(' list_expr ';' boolean  ';' error ')' block_stats
+		{
+			yyerror("error in for loop");
 		}
 		;
 
@@ -262,6 +293,7 @@ list_of_statements:   statement
 	 	|
         list_of_statements error '\n'
         {
+			yyerror("error in statement");
         	yyerrok;
         }
         ;
@@ -488,6 +520,7 @@ unary : identifier INCR
 
 declaration : 	TYPES identifier 
 		{	
+			checkSymTable($2);
 			$$ = $2;
 		}
 		;
@@ -731,6 +764,37 @@ expression:   '(' expression ')'
            	$$ = expression_ret;
 		
         }
+		|
+		expression '^' expression
+        {
+	   
+        	expression_ret = (struct expression_type*)malloc(sizeof(struct expression_type));
+			expression_ret->address = (char*)malloc(200);
+			expression_ret->address = generateNewTemporary();
+			return_val = (char*)malloc(200);
+			return_val[0] = 0;
+			strcat(return_val,expression_ret->address);
+			strcat(return_val,"=");
+			strcat(return_val,$1->address);
+			strcat(return_val,"^");
+			strcat(return_val,$3->address);
+			temp = (char*)malloc(strlen($1->code)+strlen($3->code)+strlen(return_val)+60);
+			temp[0] = 0;
+			if ($1->code[0]!=0)
+			{
+				strcat(temp,$1->code);
+				strcat(temp,"\n");
+			}
+			if ($3->code[0]!=0)
+			{
+				strcat(temp,$3->code);
+				strcat(temp,"\n");
+			}
+			strcat(temp,return_val);
+			expression_ret->code = temp;
+           	$$ = expression_ret;
+		
+        }
         |
 		identifier 
 		{
@@ -739,10 +803,11 @@ expression:   '(' expression ')'
 			expression_ret->address = $1;
 			expression_ret->code = (char*)malloc(2);
 			expression_ret->code[0] = 0;
-			$$ = expression_ret;}
-         |
-         number 
-         {
+			$$ = expression_ret;
+		}
+        |
+        number 
+        {
 			expression_ret = (struct expression_type*)malloc(sizeof(struct expression_type));
 			expression_ret->address = (char*)malloc(20);
 			expression_ret->address = $1;
@@ -836,8 +901,14 @@ extern int yyparse();
 extern FILE* yyin;
 
 int main() {
+
+	int i;
+	for(i = 0; i < 52; i++)
+	{
+		symTable[i] = 0;
+	}
 	// open a file handle to a particular file:
-	FILE* myfile = fopen("input9.txt", "r");
+	FILE* myfile = fopen("input6.txt", "r");
 	// make sure it is valid:
 	if (!myfile) {
 		printf("I can't open a.snazzle.file!");
@@ -851,8 +922,45 @@ int main() {
 	} while (!feof(yyin));
 	
 }
+
+void checkSymTable(char* ch)
+{
+	if(strlen(ch) > 1)
+	{
+		yyerror("invalid identifier");
+	}
+	char c = *ch;
+	if(c >= 'a' && c <= 'z')
+	{
+		// return c - 'a';
+		if(symTable[c - 'a'] == 0)
+		{
+			symTable[c - 'a'] = 1;
+		}
+		else
+		{
+			yyerror("variable already declared");
+		}
+	}
+	else if(c >= 'A' && c <= 'Z')
+	{
+		if(symTable[c - 'A'] == 0)
+		{
+			symTable[c - 'A'] = 1;
+		}
+		else
+		{
+			yyerror("variable already declared");
+		}
+	}
+	else
+	{
+		yyerror("Invalid Identifier");
+	}
+}
+
 void yyerror(char* s) {
-	printf("Parsing error.  Message: %s \n",s);
-	printf("%d\n",yylineno);
+	printf("\nParsing error : %s \n",s);
+	printf("at line %d\n",yylineno);
 	exit(-1);
 }
