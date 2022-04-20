@@ -231,9 +231,12 @@ construct :     block_stats
 			return_val[0] = 0;
 			strcat(return_val,$3->code);
 			strcat(return_val,"\n");
-			strcat(return_val,begin_construct_label);strcat(return_val," : ");
-			strcat(return_val,b1);strcat(return_val,"\n");
-			strcat(return_val,label);strcat(return_val," : ");
+			strcat(return_val,begin_construct_label);
+			strcat(return_val," : ");
+			strcat(return_val,b1);
+			strcat(return_val,"\n");
+			strcat(return_val,label);
+			strcat(return_val," : ");
 			strcat(return_val,s1);
 			strcat(return_val,"\n");
 			strcat(return_val,$7->code);
@@ -602,7 +605,7 @@ boolean : 	expression REL_OPT expression
 		{
 			return_val = (char*)malloc(20);
 			return_val[0] = 0;
-			strcat(return_val,"\njump TRUE");
+			strcat(return_val,"\ngoto TRUE");
 			
 			$$ = return_val;
 		}
@@ -611,7 +614,7 @@ boolean : 	expression REL_OPT expression
 		{
 			return_val = (char*)malloc(20);
 			return_val[0] = 0;
-			strcat(return_val,"\njump FAIL");
+			strcat(return_val,"\ngoto FAIL");
 			$$ = return_val;
 		}
 		;
